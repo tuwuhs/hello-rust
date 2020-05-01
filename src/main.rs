@@ -1,99 +1,88 @@
 
-// use crossterm::event::{Event, read, KeyCode};
+use std::io::{stdout, Write};
+use crossterm::{execute, queue, style, Result,
+    terminal::{self, ClearType, ScrollUp, ScrollDown, SetSize, size}, 
+    event::{self, Event, KeyCode},
+    cursor
+};
 
-// const XMIN: u32 = 0;
-// const YMIN: u32 = 0;
-// const XMAX: u32 = 31;
-// const YMAX: u32 = 31;
+const COLS: usize = 32;
+const ROWS: usize = 32;
 
-// #[derive(Debug)]
-// struct Point {
-//     x: u32,
-//     y: u32,
-// }
-
-// fn update(xy: Point, key_code: KeyCode) -> Point {
-//     match key_code {
-//         KeyCode::Up => Point{ x: xy.x, y: xy.y.min(YMAX - 1) + 1 },
-//         KeyCode::Down => Point{ x: xy.x, y: xy.y.max(YMIN + 1) - 1 },
-//         KeyCode::Right => Point{ x: xy.x.min(XMAX - 1) + 1, y: xy.y },
-//         KeyCode::Left => Point{ x: xy.x.max(XMIN + 1) - 1, y: xy.y },
-//         _ => xy,
-//     }
-// }
-
-// See https://burgers.io/extending-iterator-trait-in-rust
-// and https://burgers.io/wrapped-iterators-in-rust
-struct Update<I: Iterator> {
-    iter: I,
-    idx: usize,
-    val: I::Item,
-    count: usize,
+#[derive(Debug)]
+struct Point {
+    x: u32,
+    y: u32,
 }
 
-impl<I: Iterator> Iterator for Update<I>
-{
-    type Item = I::Item;
+fn update(xy: &Point, key_code: KeyCode) -> Point {
+    match key_code {
+        // Y is top to bottom
+        KeyCode::Down => Point{ x: xy.x, y: xy.y.min(ROWS as u32 - 2) + 1 },
+        KeyCode::Up => Point{ x: xy.x, y: xy.y.max(1) - 1 },
 
-    fn next(&mut self) -> Option<I::Item> {
-        let a = self.iter.next()?;
-        let i = self.count;
-        self.count += 1;
-        if i == self.idx {
-            Some(self.val)
-        } else {
-            Some(a)
-        }
+        // X is left to right
+        KeyCode::Right => Point{ x: xy.x.min(COLS as u32 - 2) + 1, y: xy.y },
+        KeyCode::Left => Point{ x: xy.x.max(1) - 1, y: xy.y },
+
+        _ => Point{ x: xy.x, y: xy.y },
     }
 }
 
-impl<I: Iterator> Update<I>
+fn display(xy: &Point)
 {
-    fn new(iter: I, idx: usize, val: I::Item) -> Update<I> {
-        Update { iter, idx, val, count: 0 }
-    }
+    let mut grid = [["."; COLS]; ROWS];
+    
+    // for x in grid.iter_mut().flat_map(|r| r.iter_mut()) {
+    //     println!{"{:?}", x};
+    // }
+
+    // for y in grid.iter() {
+    //     y.join(" ");
+    //     println!("{:?}", y.iter().collect::<String>());
+    // };
+    
+    // Whatever floats my boat...
+    grid[xy.y as usize][xy.x as usize] = "O";
+
+    let a = grid.iter().map(|y| y.join(" ")).collect::<Vec<_>>().join("\n");
+    // println!("{}", a);
+
+    execute!(
+        stdout(),
+        cursor::MoveTo(0, 0),
+        style::Print(&a)
+    ).unwrap();
 }
 
-// trait Updatable {
-//     fn adjust(self, idx: usize, val: Self::Item) -> Update<Self> where Self: Sized;
-// }
-
-// impl<I> Updatable for I where I: Iterator, I: Sized {
-//     fn adjust<F>(self, idx: usize, f: F) -> Adjust<Self, F> where Self: Sized {
-//         Adjust { iter: self, idx, f, count: 0 }
-//     }
-// }
+fn clear() {
+    execute!(
+        stdout(),
+        terminal::Clear(ClearType::All),
+        cursor::MoveTo(0, 0),
+    ).unwrap();
+}
 
 fn main() {
     // let mut map: [[char; 4]; 4] = [['.'; 4]; 4];
     // // map[0][1] = 'X';
     // println!("{:?}", map);
+    // let (cols, rows) = size().unwrap();
 
-    let a = [123, 3426, 23, 124, 6345, 27, 33];
-    // let b: Vec<_> = a.iter().enumerate().my_map(|(i, x)| if i == 2 { 0 } else { *x } ).collect();
-    let b: Vec<_> = a.iter().map(|x| x).collect();
-    println!("{:?} {:?}", a, b);
+    clear();
 
-    for x in Update::new(a.iter(), 2, &4) {
-        println!("{:?}", x);
+    let mut xy: Point = Point { x: 0, y: 0 };
+    display(&xy);
+    loop {
+        if let Event::Key(event) = event::read().unwrap() {
+            xy = match event.code {
+                KeyCode::Esc => break,
+                key_code => update(&xy, key_code),
+            };
+            // println!("{:?} {:?}", event, &xy);
+            display(&xy);
+        }
     }
-
-    // for x in a.iter().adjust(1, |x| 2*x) {
-    //     println!("{:?}", x);
-    // }
-
-    // return;
-
-    // let mut xy: Point = Point { x: 0, y: 0 };
-    // loop {
-    //     if let Event::Key(event) = read().unwrap() {
-    //         xy = match event.code {
-    //             KeyCode::Esc => break,
-    //             key_code => update(xy, key_code),
-    //         };
-    //         println!("{:?} {:?}", event, xy);
-    //     }
-    // }
     
-    // println!("Hello, world!");
+    println!("Hello, world!");
 }
