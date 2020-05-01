@@ -40,14 +40,20 @@ struct Snake {
 impl Snake {
     fn new(init_x: i32, init_y: i32) -> Snake {
         let mut points = VecDeque::new();
-        points.push_back(Point { x: init_x, y: init_y });
-        points.push_back(Point { x: init_x + 1, y: init_y });
-        points.push_back(Point { x: init_x + 2, y: init_y });    
+        points.push_back(Point { x: init_x, y: init_y });  
         
-        Snake { points, last_dir: Direction::Right }
+        let mut snake = Snake { points, last_dir: Direction::Right };
+        snake.keep_going();
+        snake.keep_going();
+        snake.keep_going();
+        snake
     }
 
-    fn update(&mut self, dir: Direction) -> bool {
+    fn keep_going(&mut self) {
+        self.turn(self.last_dir);
+    }
+
+    fn turn(&mut self, dir: Direction) -> bool {
         let xy = self.points.back().unwrap();
         
         if self.last_dir.opposite() == dir {
@@ -147,19 +153,19 @@ fn clear() {
 fn main() {
     let mut rng = rand::thread_rng();
 
-    let mut my_snake = Snake::new(COLS / 2, ROWS / 2);
+    let mut snake = Snake::new(COLS / 2, ROWS / 2);
     let mut apple = Point{ 
         x: rng.gen::<i32>().rem_euclid(COLS),
         y: rng.gen::<i32>().rem_euclid(ROWS) 
     };
     
-    while my_snake.collide_with_me(&apple) {
+    while snake.collide_with_me(&apple) {
         apple.x = rng.gen::<i32>().rem_euclid(COLS);
         apple.y = rng.gen::<i32>().rem_euclid(ROWS);
     }
 
     clear();
-    display(&my_snake, &apple);
+    display(&snake, &apple);
     
     loop {
         if event::poll(Duration::from_millis(50)).unwrap() {
@@ -172,31 +178,32 @@ fn main() {
                     KeyCode::Left => Direction::Left,
                     _ => continue
                 };
-                if !my_snake.update(dir) {
+
+                if !snake.turn(dir) {
                     continue;
                 }
             }
         } else {
-            my_snake.update(my_snake.last_dir);
+            snake.keep_going();
         }
 
-        if *my_snake.head() == apple {
+        if *snake.head() == apple {
             loop {
                 apple.x = rng.gen::<i32>().rem_euclid(COLS);
                 apple.y = rng.gen::<i32>().rem_euclid(ROWS);
-                if !my_snake.collide_with_me(&apple) {
+                if !snake.collide_with_me(&apple) {
                     break;
                 }
             }
         } else {
-            my_snake.no_apple();
+            snake.no_apple();
         }
 
-        if my_snake.hit_myself() {
+        if snake.hit_myself() {
             break;
         }
 
-        display(&my_snake, &apple);
+        display(&snake, &apple);
     }
     
     println!("Hello, world!");
