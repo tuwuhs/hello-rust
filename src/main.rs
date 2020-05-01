@@ -5,11 +5,12 @@ use crossterm::{execute, queue, style,
     event::{self, Event, KeyCode},
     cursor
 };
+use rand::Rng;
 
 const COLS: i32 = 32;
 const ROWS: i32 = 32;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, PartialOrd)]
 struct Point {
     x: i32,
     y: i32,
@@ -46,11 +47,11 @@ impl Snake {
         Snake { points, last_dir: Direction::Right }
     }
 
-    fn update(&mut self, dir: Direction) {
+    fn update(&mut self, dir: Direction) -> bool {
         let xy = self.points.back().unwrap();
         
         if self.last_dir.opposite() == dir {
-            return;
+            return false;
         }
 
         let new_xy = match dir {
@@ -64,15 +65,48 @@ impl Snake {
         };
         self.last_dir = dir;
         self.points.push_back(new_xy);
+        true
+    }
+
+    fn no_apple(&mut self) {
         self.points.pop_front();
+    }
+
+    fn head(&self) -> &Point {
+        self.points.back().unwrap()
+    }
+
+    fn collide_with_me(&self, q: &Point) -> bool {
+        // println!("{} {}", self.head().x, self.head().y);
+        // println!("{:?}", self.points);
+        self.points
+            .iter()
+            .any(|p| {
+                p.x == q.x 
+                && p.y == q.y
+            })
+    }
+
+    fn hit_myself(&self) -> bool {
+        let q = self.head();
+        self.points
+            .iter()
+            .enumerate()
+            .any(|(i, p)| {
+                i != self.points.len() - 1  // Skip head
+                && p.x == q.x 
+                && p.y == q.y
+            })
     }
 }
 
-fn display(snake: &Snake)
+fn display(snake: &Snake, apple: &Point)
 {
     let mut grid = [["."; COLS as usize]; ROWS as usize];
     
     // Whatever floats my boat...
+    grid[apple.y as usize][apple.x as usize] = "X";
+    
     for xy in snake.points.iter() {
         grid[xy.y as usize][xy.x as usize] = "O";
     }
@@ -96,11 +130,22 @@ fn clear() {
 }
 
 fn main() {
+    let mut rng = rand::thread_rng();
+
     let mut my_snake = Snake::new(COLS / 2, ROWS / 2);
+    let mut apple = Point{ 
+        x: rng.gen::<i32>().rem_euclid(COLS),
+        y: rng.gen::<i32>().rem_euclid(ROWS) 
+    };
+    
+    while my_snake.collide_with_me(&apple) {
+        apple.x = rng.gen::<i32>().rem_euclid(COLS);
+        apple.y = rng.gen::<i32>().rem_euclid(ROWS);
+    }
 
     clear();
-    display(&my_snake);
-
+    display(&my_snake, &apple);
+    
     loop {
         if let Event::Key(event) = event::read().unwrap() {
             let dir = match event.code {
@@ -111,9 +156,25 @@ fn main() {
                 KeyCode::Left => Direction::Left,
                 _ => continue
             };
-            my_snake.update(dir);
+            if !my_snake.update(dir) {
+                continue;
+            }
+            if *my_snake.head() == apple {
+                loop {
+                    apple.x = rng.gen::<i32>().rem_euclid(COLS);
+                    apple.y = rng.gen::<i32>().rem_euclid(ROWS);
+                    if !my_snake.collide_with_me(&apple) {
+                        break;
+                    }
+                }
+            } else {
+                my_snake.no_apple();
+            }
+            if my_snake.hit_myself() {
+                break;
+            }
             // println!("{:?}", my_snake.points);
-            display(&my_snake);
+            display(&my_snake, &apple);
         }
     }
     
