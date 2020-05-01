@@ -6,6 +6,7 @@ use crossterm::{execute, queue, style,
     cursor
 };
 use rand::Rng;
+use std::time::Duration;
 
 const COLS: i32 = 32;
 const ROWS: i32 = 32;
@@ -147,35 +148,39 @@ fn main() {
     display(&my_snake, &apple);
     
     loop {
-        if let Event::Key(event) = event::read().unwrap() {
-            let dir = match event.code {
-                KeyCode::Esc => break,
-                KeyCode::Down => Direction::Down,
-                KeyCode::Up => Direction::Up,
-                KeyCode::Right => Direction::Right,
-                KeyCode::Left => Direction::Left,
-                _ => continue
-            };
-            if !my_snake.update(dir) {
-                continue;
-            }
-            if *my_snake.head() == apple {
-                loop {
-                    apple.x = rng.gen::<i32>().rem_euclid(COLS);
-                    apple.y = rng.gen::<i32>().rem_euclid(ROWS);
-                    if !my_snake.collide_with_me(&apple) {
-                        break;
-                    }
+        if event::poll(Duration::from_millis(50)).unwrap() {
+            if let Event::Key(event) = event::read().unwrap() {
+                let dir = match event.code {
+                    KeyCode::Esc => break,
+                    KeyCode::Down => Direction::Down,
+                    KeyCode::Up => Direction::Up,
+                    KeyCode::Right => Direction::Right,
+                    KeyCode::Left => Direction::Left,
+                    _ => continue
+                };
+                if !my_snake.update(dir) {
+                    continue;
                 }
-            } else {
-                my_snake.no_apple();
             }
-            if my_snake.hit_myself() {
-                break;
-            }
-            // println!("{:?}", my_snake.points);
-            display(&my_snake, &apple);
+        } else {
+            my_snake.update(my_snake.last_dir);
         }
+        if *my_snake.head() == apple {
+            loop {
+                apple.x = rng.gen::<i32>().rem_euclid(COLS);
+                apple.y = rng.gen::<i32>().rem_euclid(ROWS);
+                if !my_snake.collide_with_me(&apple) {
+                    break;
+                }
+            }
+        } else {
+            my_snake.no_apple();
+        }
+        if my_snake.hit_myself() {
+            break;
+        }
+        // println!("{:?}", my_snake.points);
+        display(&my_snake, &apple);
     }
     
     println!("Hello, world!");
