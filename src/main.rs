@@ -24,48 +24,41 @@
 
 // See https://burgers.io/extending-iterator-trait-in-rust
 // and https://burgers.io/wrapped-iterators-in-rust
-struct Adjust<I, F> {
+struct Update<I: Iterator> {
     iter: I,
     idx: usize,
-    f: F,
+    val: I::Item,
     count: usize,
 }
 
-impl<B, I: Iterator, F> Iterator for Adjust<I, F>
-where
-    F: FnMut(I::Item) -> B,
+impl<I: Iterator> Iterator for Update<I>
 {
-    type Item = B;
+    type Item = I::Item;
 
-    fn next(&mut self) -> Option<B> {
-        // let a = self.iter.next()?;
-        // let i = self.count;
-        // self.count += 1;
-        // if i == self.idx {
-        //     Some((&mut self.f)(a))
-        // } else {
-        //     Some((&mut self.f)(a - 1))
-        // }
-        
-        self.iter.next().map(&mut self.f)
+    fn next(&mut self) -> Option<I::Item> {
+        let a = self.iter.next()?;
+        let i = self.count;
+        self.count += 1;
+        if i == self.idx {
+            Some(self.val)
+        } else {
+            Some(a)
+        }
     }
 }
 
-impl<B, I: Iterator, F> Adjust<I, F> 
-where
-    F: FnMut(I::Item) -> B
+impl<I: Iterator> Update<I>
 {
-    fn new(iter: I, idx: usize, f: F) -> Adjust<I, B> {
-        let g = |x| f(x);
-        Adjust { iter, idx, f: g, count: 0 }
+    fn new(iter: I, idx: usize, val: I::Item) -> Update<I> {
+        Update { iter, idx, val, count: 0 }
     }
 }
 
-trait Adjustable {
-    fn adjust<F>(self, idx: usize, f: F) -> Adjust<Self, F> where Self: Sized;
-}
+// trait Updatable {
+//     fn adjust(self, idx: usize, val: Self::Item) -> Update<Self> where Self: Sized;
+// }
 
-// impl<I> Adjustable for I where I: Iterator, I: Sized {
+// impl<I> Updatable for I where I: Iterator, I: Sized {
 //     fn adjust<F>(self, idx: usize, f: F) -> Adjust<Self, F> where Self: Sized {
 //         Adjust { iter: self, idx, f, count: 0 }
 //     }
@@ -81,7 +74,7 @@ fn main() {
     let b: Vec<_> = a.iter().map(|x| x).collect();
     println!("{:?} {:?}", a, b);
 
-    for x in Adjust::new(a.iter(), 2, |x| 2*x) {
+    for x in Update::new(a.iter(), 2, &4) {
         println!("{:?}", x);
     }
 
