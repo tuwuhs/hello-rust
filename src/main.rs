@@ -6,33 +6,63 @@ use crossterm::{execute, queue, style,
     cursor
 };
 
-const COLS: usize = 32;
-const ROWS: usize = 32;
+const COLS: i32 = 32;
+const ROWS: i32 = 32;
 
 #[derive(Debug)]
 struct Point {
-    x: u32,
-    y: u32,
+    x: i32,
+    y: i32,
+}
+
+#[derive(Clone, Copy, PartialEq)]
+enum Direction {
+    Down, Up, Right, Left
+}
+
+impl Direction {
+    fn opposite(&self) -> Direction {
+        match *self {
+            Direction::Down => Direction::Up,
+            Direction::Up => Direction::Down,
+            Direction::Right => Direction::Left,
+            Direction::Left => Direction::Right
+        }
+    }
 }
 
 struct Snake {
     points: VecDeque<Point>,
+    last_dir: Direction,
 }
 
 impl Snake {
-    fn update(&mut self, key_code: KeyCode) {
+    fn new(init_x: i32, init_y: i32) -> Snake {
+        let mut points = VecDeque::new();
+        points.push_back(Point { x: init_x, y: init_y });
+        points.push_back(Point { x: init_x + 1, y: init_y });
+        points.push_back(Point { x: init_x + 2, y: init_y });    
+        
+        Snake { points, last_dir: Direction::Right }
+    }
+
+    fn update(&mut self, dir: Direction) {
         let xy = self.points.back().unwrap();
-        let new_xy = match key_code {
+        
+        if self.last_dir.opposite() == dir {
+            return;
+        }
+
+        let new_xy = match dir {
             // Y is top to bottom
-            KeyCode::Down => Point{ x: xy.x, y: xy.y.min(ROWS as u32 - 2) + 1 },
-            KeyCode::Up => Point{ x: xy.x, y: xy.y.max(1) - 1 },
+            Direction::Down => Point{ x: xy.x, y: (xy.y + 1).rem_euclid(ROWS) },
+            Direction::Up => Point{ x: xy.x, y: (xy.y - 1).rem_euclid(ROWS) },
 
             // X is left to right
-            KeyCode::Right => Point{ x: xy.x.min(COLS as u32 - 2) + 1, y: xy.y },
-            KeyCode::Left => Point{ x: xy.x.max(1) - 1, y: xy.y },
-
-            _ => Point{ x: xy.x, y: xy.y },
+            Direction::Right => Point{ x: (xy.x + 1).rem_euclid(COLS), y: xy.y },
+            Direction::Left => Point{ x: (xy.x - 1).rem_euclid(COLS), y: xy.y },
         };
+        self.last_dir = dir;
         self.points.push_back(new_xy);
         self.points.pop_front();
     }
@@ -40,7 +70,7 @@ impl Snake {
 
 fn display(snake: &Snake)
 {
-    let mut grid = [["."; COLS]; ROWS];
+    let mut grid = [["."; COLS as usize]; ROWS as usize];
     
     // Whatever floats my boat...
     for xy in snake.points.iter() {
@@ -66,20 +96,22 @@ fn clear() {
 }
 
 fn main() {
-    let mut my_snake: Snake = Snake { points: VecDeque::new() };
-    my_snake.points.push_back(Point { x: 0, y: 0 });
-    my_snake.points.push_back(Point { x: 1, y: 0 });
-    my_snake.points.push_back(Point { x: 2, y: 0 });
+    let mut my_snake = Snake::new(COLS / 2, ROWS / 2);
 
     clear();
     display(&my_snake);
 
     loop {
         if let Event::Key(event) = event::read().unwrap() {
-            match event.code {
+            let dir = match event.code {
                 KeyCode::Esc => break,
-                key_code => my_snake.update(key_code),
+                KeyCode::Down => Direction::Down,
+                KeyCode::Up => Direction::Up,
+                KeyCode::Right => Direction::Right,
+                KeyCode::Left => Direction::Left,
+                _ => continue
             };
+            my_snake.update(dir);
             // println!("{:?}", my_snake.points);
             display(&my_snake);
         }
