@@ -16,12 +16,12 @@ struct Point {
 }
 
 struct Snake {
-    points: Vec<Point>,
+    points: VecDeque<Point>,
 }
 
 impl Snake {
     fn update(&mut self, key_code: KeyCode) {
-        let xy = self.points.last().unwrap();
+        let xy = self.points.back().unwrap();
         let new_xy = match key_code {
             // Y is top to bottom
             KeyCode::Down => Point{ x: xy.x, y: xy.y.min(ROWS as u32 - 2) + 1 },
@@ -33,7 +33,8 @@ impl Snake {
 
             _ => Point{ x: xy.x, y: xy.y },
         };
-        self.points.push(new_xy);
+        self.points.push_back(new_xy);
+        self.points.pop_front();
     }
 }
 
@@ -65,30 +66,21 @@ fn clear() {
 }
 
 fn main() {
-    // let mut map: [[char; 4]; 4] = [['.'; 4]; 4];
-    // // map[0][1] = 'X';
-    // println!("{:?}", map);
-    // let (cols, rows) = size().unwrap();
+    let mut my_snake: Snake = Snake { points: VecDeque::new() };
+    my_snake.points.push_back(Point { x: 0, y: 0 });
+    my_snake.points.push_back(Point { x: 1, y: 0 });
+    my_snake.points.push_back(Point { x: 2, y: 0 });
 
     clear();
-
-    let mut my_snake: Snake = Snake {points: vec![Point { x: 0, y: 0 }]};
-
-    let mut xy: Point = Point { x: 0, y: 0 };
     display(&my_snake);
+
     loop {
         if let Event::Key(event) = event::read().unwrap() {
-            // xy = match event.code {
-            //     KeyCode::Esc => break,
-            //     key_code => update(&xy, key_code),
-            // };
-
             match event.code {
                 KeyCode::Esc => break,
                 key_code => my_snake.update(key_code),
             };
             // println!("{:?}", my_snake.points);
-            // println!("{:?} {:?}", event, &xy);
             display(&my_snake);
         }
     }
