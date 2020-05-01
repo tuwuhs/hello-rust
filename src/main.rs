@@ -1,24 +1,38 @@
 
 use crossterm::event::{Event, read, KeyCode};
 
+const XMIN: u32 = 0;
+const YMIN: u32 = 0;
+const XMAX: u32 = 31;
+const YMAX: u32 = 31;
+
+#[derive(Debug)]
+struct Point {
+    x: u32,
+    y: u32,
+}
+
+fn update(xy: Point, key_code: KeyCode) -> Point {
+    match key_code {
+        KeyCode::Up => Point{ x: xy.x, y: xy.y.min(YMAX - 1) + 1 },
+        KeyCode::Down => Point{ x: xy.x, y: xy.y.max(YMIN + 1) - 1 },
+        KeyCode::Right => Point{ x: xy.x.min(XMAX - 1) + 1, y: xy.y },
+        KeyCode::Left => Point{ x: xy.x.max(XMIN + 1) - 1, y: xy.y },
+        _ => xy,
+    }
+}
+
 fn main() {
-    let _a = 25;
-    let b = [1, 2, 3, 4];
-
+    let mut xy: Point = Point { x: 0, y: 0 };
     loop {
-        // match read().unwrap() {
-        //     Event::Key(event) => println!("{:?}", event.code),
-        //     _ => (),
-        // }
-
         if let Event::Key(event) = read().unwrap() {
-            match event.code {
-                KeyCode::Up => println!("YEAH"),
+            xy = match event.code {
                 KeyCode::Esc => break,
-                _ => (),
-            }
+                key_code => update(xy, key_code),
+            };
+            println!("{:?} {:?}", event, xy);
         }
     }
     
-    println!("Hello, world! {:?}", b);
+    println!("Hello, world!");
 }
