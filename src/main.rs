@@ -1,6 +1,6 @@
 
-use std::io::{stdout, Write};
-use crossterm::{execute, queue, style, Result,
+use std::{collections::VecDeque, io::{stdout, Write}};
+use crossterm::{execute, queue, style, 
     terminal::{self, ClearType, ScrollUp, ScrollDown, SetSize, size}, 
     event::{self, Event, KeyCode},
     cursor
@@ -15,35 +15,36 @@ struct Point {
     y: u32,
 }
 
-fn update(xy: &Point, key_code: KeyCode) -> Point {
-    match key_code {
-        // Y is top to bottom
-        KeyCode::Down => Point{ x: xy.x, y: xy.y.min(ROWS as u32 - 2) + 1 },
-        KeyCode::Up => Point{ x: xy.x, y: xy.y.max(1) - 1 },
+struct Snake {
+    points: Vec<Point>,
+}
 
-        // X is left to right
-        KeyCode::Right => Point{ x: xy.x.min(COLS as u32 - 2) + 1, y: xy.y },
-        KeyCode::Left => Point{ x: xy.x.max(1) - 1, y: xy.y },
+impl Snake {
+    fn update(&mut self, key_code: KeyCode) {
+        let xy = self.points.last().unwrap();
+        let new_xy = match key_code {
+            // Y is top to bottom
+            KeyCode::Down => Point{ x: xy.x, y: xy.y.min(ROWS as u32 - 2) + 1 },
+            KeyCode::Up => Point{ x: xy.x, y: xy.y.max(1) - 1 },
 
-        _ => Point{ x: xy.x, y: xy.y },
+            // X is left to right
+            KeyCode::Right => Point{ x: xy.x.min(COLS as u32 - 2) + 1, y: xy.y },
+            KeyCode::Left => Point{ x: xy.x.max(1) - 1, y: xy.y },
+
+            _ => Point{ x: xy.x, y: xy.y },
+        };
+        self.points.push(new_xy);
     }
 }
 
-fn display(xy: &Point)
+fn display(snake: &Snake)
 {
     let mut grid = [["."; COLS]; ROWS];
     
-    // for x in grid.iter_mut().flat_map(|r| r.iter_mut()) {
-    //     println!{"{:?}", x};
-    // }
-
-    // for y in grid.iter() {
-    //     y.join(" ");
-    //     println!("{:?}", y.iter().collect::<String>());
-    // };
-    
     // Whatever floats my boat...
-    grid[xy.y as usize][xy.x as usize] = "O";
+    for xy in snake.points.iter() {
+        grid[xy.y as usize][xy.x as usize] = "O";
+    }
 
     let a = grid.iter().map(|y| y.join(" ")).collect::<Vec<_>>().join("\n");
     // println!("{}", a);
@@ -71,16 +72,24 @@ fn main() {
 
     clear();
 
+    let mut my_snake: Snake = Snake {points: vec![Point { x: 0, y: 0 }]};
+
     let mut xy: Point = Point { x: 0, y: 0 };
-    display(&xy);
+    display(&my_snake);
     loop {
         if let Event::Key(event) = event::read().unwrap() {
-            xy = match event.code {
+            // xy = match event.code {
+            //     KeyCode::Esc => break,
+            //     key_code => update(&xy, key_code),
+            // };
+
+            match event.code {
                 KeyCode::Esc => break,
-                key_code => update(&xy, key_code),
+                key_code => my_snake.update(key_code),
             };
+            // println!("{:?}", my_snake.points);
             // println!("{:?} {:?}", event, &xy);
-            display(&xy);
+            display(&my_snake);
         }
     }
     
