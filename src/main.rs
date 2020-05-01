@@ -1,9 +1,8 @@
 
 use std::{collections::VecDeque, io::{stdout, Write}};
-use crossterm::{execute, queue, style, 
-    terminal::{self, ClearType, ScrollUp, ScrollDown, SetSize, size}, 
+use crossterm::{execute, style, cursor,
+    terminal::{self, ClearType}, 
     event::{self, Event, KeyCode},
-    cursor
 };
 use rand::Rng;
 use std::time::Duration;
@@ -57,15 +56,29 @@ impl Snake {
 
         let new_xy = match dir {
             // Y is top to bottom
-            Direction::Down => Point{ x: xy.x, y: (xy.y + 1).rem_euclid(ROWS) },
-            Direction::Up => Point{ x: xy.x, y: (xy.y - 1).rem_euclid(ROWS) },
+            Direction::Down => Point{ 
+                x: xy.x, 
+                y: (xy.y + 1).rem_euclid(ROWS) 
+            },
+            Direction::Up => Point{ 
+                x: xy.x, 
+                y: (xy.y - 1).rem_euclid(ROWS) 
+            },
 
             // X is left to right
-            Direction::Right => Point{ x: (xy.x + 1).rem_euclid(COLS), y: xy.y },
-            Direction::Left => Point{ x: (xy.x - 1).rem_euclid(COLS), y: xy.y },
+            Direction::Right => Point{ 
+                x: (xy.x + 1).rem_euclid(COLS), 
+                y: xy.y 
+            },
+            Direction::Left => Point{ 
+                x: (xy.x - 1).rem_euclid(COLS), 
+                y: xy.y 
+            },
         };
+
         self.last_dir = dir;
         self.points.push_back(new_xy);
+        
         true
     }
 
@@ -78,8 +91,6 @@ impl Snake {
     }
 
     fn collide_with_me(&self, q: &Point) -> bool {
-        // println!("{} {}", self.head().x, self.head().y);
-        // println!("{:?}", self.points);
         self.points
             .iter()
             .any(|p| {
@@ -112,8 +123,11 @@ fn display(snake: &Snake, apple: &Point)
         grid[xy.y as usize][xy.x as usize] = "O";
     }
 
-    let a = grid.iter().map(|y| y.join(" ")).collect::<Vec<_>>().join("\n");
-    // println!("{}", a);
+    let a = grid
+        .iter()
+        .map(|y| y.join(" "))
+        .collect::<Vec<_>>()
+        .join("\n");
 
     execute!(
         stdout(),
@@ -165,6 +179,7 @@ fn main() {
         } else {
             my_snake.update(my_snake.last_dir);
         }
+
         if *my_snake.head() == apple {
             loop {
                 apple.x = rng.gen::<i32>().rem_euclid(COLS);
@@ -176,10 +191,11 @@ fn main() {
         } else {
             my_snake.no_apple();
         }
+
         if my_snake.hit_myself() {
             break;
         }
-        // println!("{:?}", my_snake.points);
+
         display(&my_snake, &apple);
     }
     
