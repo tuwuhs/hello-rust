@@ -129,11 +129,14 @@ fn display(snake: &Snake, apple: &Point)
         grid[xy.y as usize][xy.x as usize] = "O";
     }
 
+    // See https://stackoverflow.com/a/56033952
+    // fold() is slower but processes the string in-place
     let a = grid
         .iter()
         .map(|y| y.join(" "))
-        .collect::<Vec<_>>()
-        .join("\n");
+        .fold(String::new(), |a, b| a + &b + "\n");
+        // .collect::<Vec<_>>()
+        // .join("\n");
 
     execute!(
         stdout(),
